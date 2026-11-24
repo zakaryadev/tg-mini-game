@@ -6,6 +6,7 @@ import express from 'express';
 import { Server } from 'socket.io';
 import { validateInitData } from './telegram.js';
 import { Rooms, DEFAULTS } from './rooms.js';
+import { TelegramBot } from './botapi.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -29,8 +30,9 @@ export function createApp(env = process.env, roomOpts = {}) {
   const rooms = new Rooms(io, { ...scaled, ...roomOpts });
 
   app.get('/healthz', (_req, res) => res.json({ ok: true, rooms: rooms.rooms.size }));
+  const cfg = { botUsername: env.BOT_USERNAME || '' };
   app.get('/api/config', (_req, res) => res.json({
-    botUsername: env.BOT_USERNAME || '',
+    botUsername: cfg.botUsername,
     appShortName: env.APP_SHORT_NAME || '',
     devAuth: allowDev
   }));
@@ -102,7 +104,18 @@ export function createApp(env = process.env, roomOpts = {}) {
     });
   });
 
-  return { app, server, io, rooms };
+  // PUBLIC_URL (HTTPS) berilsa: menyu tugmasi va /start <kod> javobi avtomatik sozlanadi
+  let bot = null;
+  if (botToken && env.PUBLIC_URL) {
+    bot = new TelegramBot(botToken, env.PUBLIC_URL);
+    bot.setup().then((me) => {
+      cfg.botUsername = cfg.botUsername || me.username;
+      bot.start();
+      console.log(`Telegram bot tayyor: https://t.me/${me.username}`);
+    }).catch((e) => console.error('Telegram bot sozlanmadi:', e.message));
+  }
+
+  return { app, server, io, rooms, bot };
 }
 
 const isMain = process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url);

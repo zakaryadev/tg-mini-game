@@ -32,7 +32,7 @@ export async function loadConfig() {
 
 export function inviteLink(cfg, code) {
   if (cfg.botUsername && cfg.appShortName) return `https://t.me/${cfg.botUsername}/${cfg.appShortName}?startapp=${code}`;
-  if (cfg.botUsername) return `https://t.me/${cfg.botUsername}?startapp=${code}`;
+  if (cfg.botUsername) return `https://t.me/${cfg.botUsername}?start=${code}`;
   return `${location.origin}/?room=${code}`;
 }
 
