@@ -76,7 +76,7 @@ export class Rooms {
   }
 
   // ---------- xona boshqaruvi ----------
-  createRoom(user, socket) {
+  createRoom(user, socket, { silent = false } = {}) {
     if (this.roomOf(user.id)) this.leave(user.id);
     const code = this.genCode();
     const room = {
@@ -85,6 +85,7 @@ export class Rooms {
     };
     this.rooms.set(code, room);
     this.addHuman(room, user, socket);
+    if (!silent) this.broadcast(room);
     return room;
   }
 
@@ -233,7 +234,7 @@ export class Rooms {
     const other = this.queue.shift();
     if (other) {
       clearTimeout(other.timer);
-      const room = this.createRoom(other.user, other.socket);
+      const room = this.createRoom(other.user, other.socket, { silent: true });
       this.addHuman(room, user, socket);
       this.beginGame(room);
       return { ok: true, matched: true, code: room.code };
@@ -241,7 +242,7 @@ export class Rooms {
     const entry = { user, socket, timer: null };
     entry.timer = setTimeout(() => {
       this.dequeue(user.id);
-      const room = this.createRoom(user, socket);
+      const room = this.createRoom(user, socket, { silent: true });
       this.addBotTo(room);
       this.beginGame(room);
     }, this.cfg.matchWaitMs);
@@ -265,7 +266,7 @@ export class Rooms {
 
   /** Botlar bilan tezkor o'yin */
   vsBots(user, socket, bots = 1) {
-    const room = this.createRoom(user, socket);
+    const room = this.createRoom(user, socket, { silent: true });
     const n = Math.max(1, Math.min(3, Number(bots) || 1));
     for (let i = 0; i < n; i++) this.addBotTo(room);
     this.beginGame(room);

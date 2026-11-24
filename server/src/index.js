@@ -5,7 +5,7 @@ import { fileURLToPath } from 'node:url';
 import express from 'express';
 import { Server } from 'socket.io';
 import { validateInitData } from './telegram.js';
-import { Rooms } from './rooms.js';
+import { Rooms, DEFAULTS } from './rooms.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -22,7 +22,11 @@ export function createApp(env = process.env, roomOpts = {}) {
     pingInterval: 10000,
     pingTimeout: 10000
   });
-  const rooms = new Rooms(io, roomOpts);
+  // TIME_SCALE (masalan 0.2) — sinov/demo uchun barcha kutish vaqtlarini qisqartiradi
+  const scale = Number(env.TIME_SCALE) || 1;
+  const scaled = scale === 1 ? {} : Object.fromEntries(
+    ['turnMs', 'botRollMs', 'botMoveMs', 'afterMoveMs', 'afterRollMs'].map((k) => [k, Math.round(DEFAULTS[k] * scale)]));
+  const rooms = new Rooms(io, { ...scaled, ...roomOpts });
 
   app.get('/healthz', (_req, res) => res.json({ ok: true, rooms: rooms.rooms.size }));
   app.get('/api/config', (_req, res) => res.json({
@@ -73,8 +77,9 @@ export function createApp(env = process.env, roomOpts = {}) {
       try { reply(fn(payload || {}) ?? { ok: true }); } catch (e) { console.error(event, e); reply({ ok: false, error: 'server_error' }); }
     });
 
-    const room = rooms.attach(user, socket);
-    socket.emit('hello', { user: { id: user.id, name: user.name, photo: user.photo }, code: room?.code || null, startParam: user.startParam });
+    const existing = rooms.roomOf(user.id);
+    socket.emit('hello', { user: { id: user.id, name: user.name, photo: user.photo }, code: existing?.code || null, startParam: user.startParam });
+    rooms.attach(user, socket);
 
     on('room:create', () => ({ ok: true, code: rooms.createRoom(user, socket).code }));
     on('room:join', ({ code }) => rooms.join(user, code, socket));
