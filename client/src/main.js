@@ -284,7 +284,7 @@ function startGame(r) {
 
 async function roll() {
   const r = await emit(S.socket, 'game:roll');
-  if (!r.ok && r.error !== 'wrong_phase') toast(errText(r.error));
+  if (!r.ok && !['wrong_phase', 'not_playing', 'not_your_turn'].includes(r.error)) toast(errText(r.error));
 }
 async function pick(color, i) {
   if (!S.G || color !== S.G.mine) return;
@@ -380,7 +380,7 @@ function showResult(r) {
   r.state.winners.forEach((c, i) => {
     const row = el('div', `rank c-${c}`);
     const n = el('b'); n.textContent = i + 1;
-    const nm = el('span'); nm.textContent = nameOf(r, c);
+    const nm = el('span', 'nm'); nm.textContent = nameOf(r, c);
     row.append(n, pin(c, 18), nm);
     m.append(row);
   });
