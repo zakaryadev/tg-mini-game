@@ -106,8 +106,9 @@ export function createApp(env = process.env, roomOpts = {}) {
 
   // PUBLIC_URL (HTTPS) berilsa: menyu tugmasi va /start <kod> javobi avtomatik sozlanadi
   let bot = null;
-  if (botToken && env.PUBLIC_URL) {
-    bot = new TelegramBot(botToken, env.PUBLIC_URL);
+  const publicUrl = env.PUBLIC_URL || env.RENDER_EXTERNAL_URL; // Render manzilni o'zi beradi
+  if (botToken && publicUrl) {
+    bot = new TelegramBot(botToken, publicUrl);
     bot.setup().then((me) => {
       cfg.botUsername = cfg.botUsername || me.username;
       bot.start();
