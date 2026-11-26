@@ -48,6 +48,7 @@ const SVG = {
   bot: '<svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="#3a2600" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="8" width="14" height="11" rx="3"/><path d="M12 8V4M9 13h.01M15 13h.01M9.5 16.5h5"/></svg>',
   friends: '<svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="8" r="3.2"/><circle cx="17" cy="9.5" r="2.6"/><path d="M3 19c0-3.3 2.7-5.5 6-5.5s6 2.2 6 5.5M15.5 14.2c3 0 5.5 1.7 5.5 4.8"/></svg>',
   globe: '<svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c3 3 3 15 0 18M12 3c-3 3-3 15 0 18"/></svg>',
+  copy: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V6a2 2 0 0 1 2-2h8"/></svg>',
   send: '<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 4L3 11l6 2.5L11.5 20 14 14l7-10z"/></svg>',
   pointer: '<svg width="36" height="36" viewBox="0 0 24 24" fill="#fff" stroke="#0a2a5e" stroke-width="1.2" stroke-linejoin="round" aria-hidden="true"><path d="M5 3l14 7-6 2-2 6z"/></svg>'
 };
@@ -113,6 +114,9 @@ function showHome() {
 }
 
 function renderConn() {
+  const b = document.getElementById('banner');
+  b.textContent = S.authError ? 'Kirish xatosi: Telegram orqali oching' : 'Aloqa uzildi, qayta ulanmoqda…';
+  b.classList.toggle('show', !S.online && !!S.socket && (S.authError || S.screen !== 'home' || !!S.room));
   const c = document.querySelector('.conn');
   if (!c) return;
   c.textContent = S.authError ? 'Kirish xatosi' : S.online ? 'Onlayn' : 'Ulanmoqda…';
@@ -155,17 +159,16 @@ function showLobby(r) {
   const s = screen('lobby');
   s.innerHTML = `
     <div class="head"><button class="iconbtn" aria-label="Orqaga">${SVG.back}</button><h1>O'yin xonasi</h1></div>
-    <div class="codebox"><div class="lbl">Xona kodi (bosib nusxalang)</div><div class="code" role="button" tabindex="0"></div><div class="sub">Do'stlaringiz havola yoki kod orqali qo'shiladi</div></div>
+    <div class="codebox"><div class="lbl">Xona kodi (bosib nusxalang)</div><button class="code" aria-label="Xona kodini nusxalash"><span></span>${SVG.copy}</button><div class="sub">Do'stlaringiz havola yoki kod orqali qo'shiladi</div></div>
     <div class="seats"><div class="cap"><span>O'yinchilar</span><span class="cnt"></span></div></div>
     <div class="actions"></div>`;
   s.querySelector('.iconbtn').onclick = leaveRoom;
   const codeEl = s.querySelector('.code');
-  codeEl.textContent = r.code;
+  codeEl.querySelector('span').textContent = r.code;
   const copy = async () => {
     try { await navigator.clipboard.writeText(r.code); toast('Kod nusxalandi'); } catch { toast(r.code); }
   };
   codeEl.onclick = copy;
-  codeEl.onkeydown = (e) => { if (e.key === 'Enter') copy(); };
   s.querySelector('.cnt').textContent = `${r.players.length} / 4`;
 
   const seats = s.querySelector('.seats');
@@ -239,32 +242,31 @@ function startGame(r) {
   const k = rotationFor(mine);
   const s = screen('game', 'game');
   s.innerHTML = `
-    <div class="bar"><button class="iconbtn" aria-label="Orqaga">${SVG.back}</button><div class="pill"></div></div>
+    <div class="bar"><button class="iconbtn" aria-label="Orqaga">${SVG.back}</button><span class="codechip">Xona <b></b></span><span class="spacer"></span></div>
     <div class="stage">
-      <div class="seatrow top"><div class="slot l"></div><div class="slot r"></div></div>
+      <div class="slot tl"></div><div class="slot tr"></div>
       <div class="boardwrap"></div>
-      <div class="seatrow bottom"><div class="slot l"></div><div class="slot r"></div></div>
-      <div class="hint"></div>
+      <div class="slot bl"></div><div class="slot br"></div>
+      <div class="status" role="status" aria-live="polite"><i class="dot"></i><span class="txt"></span></div>
     </div>`;
+  s.querySelector('.codechip b').textContent = r.code;
   s.querySelector('.iconbtn').onclick = leaveRoom;
 
   const wrap = s.querySelector('.boardwrap');
   const { layer } = buildBoard(wrap, { rotation: k, players: r.players });
   const G = { code: r.code, mine, k, dice: {}, panels: {}, busy: false, lastTurnKey: '' };
   G.tokens = new Tokens(layer, k, (color, i) => pick(color, i));
-  G.pill = s.querySelector('.pill');
-  G.hint = s.querySelector('.hint');
+  G.status = s.querySelector('.status');
 
-  const rows = { 0: ['top', 'l'], 1: ['top', 'r'], 2: ['bottom', 'r'], 3: ['bottom', 'l'] };
+  const corners = ['tl', 'tr', 'br', 'bl'];
   for (const p of r.players) {
-    const [row, side] = rows[cornerOf(p.color, k)];
-    const slot = s.querySelector(`.seatrow.${row} .slot.${side}`);
+    const slot = s.querySelector(`.slot.${corners[cornerOf(p.color, k)]}`);
     const isMe = p.userId === S.me.id;
     const panel = el('div', `panel c-${p.color}` + (isMe ? ' me' : ''));
     const nm = el('div', 'pname'); nm.textContent = isMe ? 'Siz' : p.name;
     const box = el('div', 'pbox');
     const chip = el('div', 'chip'); chip.append(pin(p.color, 18));
-    const die = createDie(isMe ? 46 : 40);
+    const die = createDie();
     let holder;
     if (isMe) {
       holder = el('button', 'dicebtn'); holder.setAttribute('aria-label', 'Zarni tashlash');
@@ -334,14 +336,24 @@ function syncGame(r, instant = false) {
     mineUi.holder.disabled = !can;
     mineUi.holder.classList.toggle('pulse', can);
   }
-  // matn
+  // holat satri
   const who = nameOf(r, st.turn);
-  if (r.status === 'over') G.pill.textContent = 'O\'yin tugadi';
-  else if (myTurn) G.pill.textContent = st.phase === 'roll' ? 'Sizning navbatingiz' : 'Tokenni tanlang';
-  else G.pill.textContent = `${who} yuryapti`;
-  G.hint.replaceChildren();
-  if (myTurn && st.phase === 'roll') { G.hint.innerHTML = SVG.pointer + '<span>Zarni tashlash uchun bosing</span>'; }
-  else if (myTurn && st.phase === 'move') { const sp = el('span'); sp.textContent = `${st.dice} yurish: yonib turgan tokenni bosing`; G.hint.append(sp); }
+  const turnP = r.players.find((x) => x.color === st.turn);
+  const txt = G.status.querySelector('.txt');
+  G.status.className = 'status c-' + st.turn + (myTurn ? ' mine' : '');
+  G.status.querySelector('.svg')?.remove();
+  G.status.querySelector('svg')?.remove();
+  if (r.status === 'over') { G.status.className = 'status'; txt.textContent = 'O\'yin tugadi'; }
+  else if (myTurn && st.phase === 'roll') { txt.textContent = 'Sizning navbatingiz: zarni tashlang'; G.status.insertAdjacentHTML('afterbegin', SVG.pointer); }
+  else if (myTurn) txt.textContent = `${st.dice} tushdi: yonib turgan tokenni tanlang`;
+  else if (turnP && !turnP.connected && !turnP.isBot) txt.textContent = `${who} offlayn, bot o'ynayapti`;
+  else txt.textContent = `${who} yuryapti…`;
+  // yurish nishonlari
+  const dest = [];
+  if (myTurn && st.phase === 'move') {
+    for (const i of st.movable) { const from = st.tokens[G.mine][i]; dest.push(from === -1 ? 0 : from + st.dice); }
+  }
+  G.tokens.setDest(G.mine, dest);
   if (myTurn && G.lastTurnKey !== st.seq + ':' + st.phase) haptic.impact('light');
   G.lastTurnKey = st.seq + ':' + st.phase;
 }
@@ -447,7 +459,7 @@ async function boot() {
   S.socket = socket;
 
   socket.on('connect', () => { S.online = true; S.authError = false; renderConn(); });
-  socket.on('disconnect', () => { S.online = false; renderConn(); if (S.room) toast('Aloqa uzildi, qayta ulanmoqda…', 2500); });
+  socket.on('disconnect', () => { S.online = false; renderConn(); });
   socket.on('connect_error', (e) => { S.online = false; S.authError = /unauthorized/.test(e.message); renderConn(); });
   socket.on('room:update', enqueue);
   socket.on('hello', async (h) => {

@@ -54,6 +54,21 @@ Bot token bo'lmasa, faqat shu "dev-kirish" ishlaydi (production'da avtomatik o'c
 3. BotFather → `/newapp` → botni tanlang → Web App URL: sizning HTTPS manzilingiz, qisqa nomni (`APP_SHORT_NAME`) kiriting.
 4. Taklif havolasi: `https://t.me/<BOT_USERNAME>/<APP_SHORT_NAME>?startapp=<KOD>`. Do'st bosganda xonaga o'zi kiradi.
 
+## Dizayn tokenlari
+
+Barcha rang, oraliq, radius, soya, shrift va animatsiya qiymatlari `client/src/tokens.css` da. Komponentlar (`styles.css`) faqat tokenlarni ishlatadi, shuning uchun mavzuni bitta joyda o'zgartirsa bo'ladi.
+
+- **O'yinchi ranglari:** `--red|green|yellow|blue-{300,400,500,700}` (300 chegara, 400 yorqin UI, 500 taxta, 700 soya)
+- **Fon va yuzalar:** `--navy-*`, `--surface-glass`, `--surface-panel`, `--border-*`
+- **Urg'u:** `--gold-*`, matn `--text-1..3`, holat `--success|danger|info`
+- **Oraliq:** `--space-1..6` (4 px tarmoq), `--r-sm..pill`, `--shadow-*`, `--fs-*`, `--t-*`
+
+## Responsive maket
+
+- **Telefon (portret):** panellar taxta tepasida va ostida, holat satri pastda. Taxta o'lchami ekran kengligi va balandligiga qarab o'zgaradi (240–560 px), Telegram xavfsiz hududlari hisobga olingan.
+- **Gorizontal / keng ekran** (`aspect-ratio ≥ 11/10`): panellar taxtaning ikki yonida.
+- Bosish maydonlari ≥ 44 px, `prefers-reduced-motion` hurmat qilinadi, klaviatura bilan tokenni tanlash mumkin.
+
 ## Testlar
 
 ```bash

@@ -1,10 +1,11 @@
 // 3D kub zar. Natijani server beradi; bu yerda faqat animatsiya.
 const FACES = { 1: [4], 2: [0, 8], 3: [0, 4, 8], 4: [0, 2, 6, 8], 5: [0, 2, 4, 6, 8], 6: [0, 2, 3, 5, 6, 8] };
 
-export function createDie(size = 48) {
+/** O'lchami CSS o'zgaruvchisi --die dan olinadi (panelga qarab moslashadi) */
+export function createDie() {
   const root = document.createElement('span');
   root.className = 'dwrap';
-  root.style.setProperty('--s', size + 'px');
+  root.style.setProperty('--s', 'var(--die, 44px)');
   let faces = '';
   for (let n = 1; n <= 6; n++) {
     let pips = '';

@@ -4,7 +4,6 @@ import {
 } from '../../shared/rules.js';
 
 const ARROWS = ['↑', '→', '↓', '←'];
-const COLOR_VAR = { red: 'var(--red)', green: 'var(--green)', yellow: 'var(--yellow)', blue: 'var(--blue)' };
 
 /** Mening rangim pastki-chap burchakda bo'lishi uchun nechta 90° burish kerak */
 export function rotationFor(color) {
@@ -84,7 +83,7 @@ export function buildBoard(container, { rotation, players }) {
   }
 
   const center = el('div', 'hub');
-  center.style.background = `conic-gradient(from ${-45 + k * 90}deg, var(--green) 0 25%, var(--yellow) 25% 50%, var(--blue) 50% 75%, var(--red) 75% 100%)`;
+  center.style.background = `conic-gradient(from ${-45 + k * 90}deg, var(--green-500) 0 25%, var(--yellow-500) 25% 50%, var(--blue-500) 50% 75%, var(--red-500) 75% 100%)`;
   board.append(center);
 
   const layer = el('div', 'tokens');
@@ -108,7 +107,7 @@ export class Tokens {
     const key = color + ':' + i;
     if (!this.els[key]) {
       const t = el('div', 'tok c-' + color);
-      t.innerHTML = '<span class="bob"><span class="pinicon"></span></span><button class="hit" tabindex="-1" aria-label="Tokenni yurgizish"></button>';
+      t.innerHTML = '<span class="bob"><span class="pinicon"></span></span><button class="hit" aria-label="Tokenni yurgizish"></button>';
       t.addEventListener('click', () => { if (t.classList.contains('can')) this.onPick(color, i); });
       this.layer.append(t);
       this.els[key] = t;
@@ -155,6 +154,18 @@ export class Tokens {
     }
   }
 
+  /** Tanlangan token qayerga tushishini ko'rsatuvchi nishonlar */
+  setDest(color, list) {
+    this.layer.querySelectorAll('.dest').forEach((d) => d.remove());
+    for (const p of new Set(list)) {
+      const [r, c] = rotateCenter(centerOf(color, p, 0), this.k);
+      const d = el('i', 'dest');
+      d.style.left = (c / 15) * 100 + '%';
+      d.style.top = (r / 15) * 100 + '%';
+      this.layer.prepend(d);
+    }
+  }
+
   async step(color, i, from, to, stepMs = 130) {
     const set = (p) => { this.pos[color][i] = p; this.layout(); };
     if (from === YARD) { set(0); await sleep(stepMs * 2); return; }
@@ -171,4 +182,3 @@ export class Tokens {
 
 export const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 export function el(tag, cls = '') { const e = document.createElement(tag); if (cls) e.className = cls; return e; }
-export { COLOR_VAR };
